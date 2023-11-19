@@ -3,20 +3,26 @@ use alloc::{
     string::String,
     vec::Vec,
 };
-use core::{ops::Deref, slice::Iter};
+use core::ops::Deref;
 
 // TODO Searchable
 
 #[allow(clippy::len_without_is_empty)]
 pub trait BMByteSearchable {
+    type Iter<'it>: Iterator<Item = u8> + ExactSizeIterator + DoubleEndedIterator
+    where
+        Self: 'it;
+
     fn len(&self) -> usize;
 
     fn value_at(&self, index: usize) -> u8;
 
-    fn iter(&self) -> Iter<u8>;
+    fn iter(&self) -> Self::Iter<'_>;
 }
 
 impl BMByteSearchable for String {
+    type Iter<'it> = core::iter::Copied<core::slice::Iter<'it, u8>>;
+
     #[inline]
     fn len(&self) -> usize {
         String::len(self)
@@ -28,12 +34,14 @@ impl BMByteSearchable for String {
     }
 
     #[inline]
-    fn iter(&self) -> Iter<u8> {
-        self.as_bytes().iter()
+    fn iter(&self) -> Self::Iter<'_> {
+        self.as_bytes().iter().copied()
     }
 }
 
 impl BMByteSearchable for &str {
+    type Iter<'it> = core::iter::Copied<core::slice::Iter<'it, u8>> where Self: 'it;
+
     #[inline]
     fn len(&self) -> usize {
         str::len(self)
@@ -45,12 +53,14 @@ impl BMByteSearchable for &str {
     }
 
     #[inline]
-    fn iter(&self) -> Iter<u8> {
-        self.as_bytes().iter()
+    fn iter(&self) -> Self::Iter<'_> {
+        self.as_bytes().iter().copied()
     }
 }
 
 impl BMByteSearchable for dyn Deref<Target = [u8]> {
+    type Iter<'it> = core::iter::Copied<core::slice::Iter<'it, u8>>;
+
     #[inline]
     fn len(&self) -> usize {
         <[u8]>::len(self)
@@ -62,15 +72,17 @@ impl BMByteSearchable for dyn Deref<Target = [u8]> {
     }
 
     #[inline]
-    fn iter(&self) -> Iter<u8> {
-        <[u8]>::iter(self)
+    fn iter(&self) -> Self::Iter<'_> {
+        <[u8]>::iter(self).copied()
     }
 }
 
 impl BMByteSearchable for Vec<u8> {
+    type Iter<'it> = core::iter::Copied<core::slice::Iter<'it, u8>>;
+
     #[inline]
     fn len(&self) -> usize {
-        Vec::len(self)
+        Self::len(self)
     }
 
     #[inline]
@@ -79,25 +91,27 @@ impl BMByteSearchable for Vec<u8> {
     }
 
     #[inline]
-    fn iter(&self) -> Iter<u8> {
-        self.as_slice().iter()
+    fn iter(&self) -> Self::Iter<'_> {
+        self.as_slice().iter().copied()
     }
 }
 
 impl<T: BMByteSearchable> BMByteSearchable for &T {
+    type Iter<'it> = T::Iter<'it> where Self: 'it;
+
     #[inline]
     fn len(&self) -> usize {
-        <dyn BMByteSearchable>::len(*self)
+        T::len(self)
     }
 
     #[inline]
     fn value_at(&self, index: usize) -> u8 {
-        <dyn BMByteSearchable>::value_at(*self, index)
+        T::value_at(self, index)
     }
 
     #[inline]
-    fn iter(&self) -> Iter<u8> {
-        <dyn BMByteSearchable>::iter(*self)
+    fn iter(&self) -> Self::Iter<'_> {
+        T::iter(self)
     }
 }
 
@@ -157,13 +171,11 @@ impl BMByteBadCharShiftMap {
 
         let mut bad_char_shift_map = [pattern_len; 256];
 
-        for (i, c) in pattern.iter().take(pattern_len_dec).map(|&c| c as usize).enumerate() {
+        for (i, c) in pattern.iter().take(pattern_len_dec).map(|c| c as usize).enumerate() {
             bad_char_shift_map[c] = pattern_len_dec - i;
         }
 
-        Some(BMByteBadCharShiftMap {
-            t: bad_char_shift_map
-        })
+        Some(BMByteBadCharShiftMap { t: bad_char_shift_map })
     }
 }
 
@@ -182,14 +194,12 @@ impl BMByteBadCharShiftMapRev {
         let mut bad_char_shift_map = [pattern_len; 256];
 
         for (i, c) in
-            pattern.iter().enumerate().rev().take(pattern_len_dec).map(|(i, &c)| (i, c as usize))
+            pattern.iter().enumerate().rev().take(pattern_len_dec).map(|(i, c)| (i, c as usize))
         {
             bad_char_shift_map[c] = i;
         }
 
-        Some(BMByteBadCharShiftMapRev {
-            t: bad_char_shift_map
-        })
+        Some(BMByteBadCharShiftMapRev { t: bad_char_shift_map })
     }
 }
 
@@ -198,9 +208,9 @@ impl BMByteBadCharShiftMapRev {
 /// Using Boyer-Moore-MagicLen to search byte sub-sequences in any byte sequence, including self-synchronizing string encoding data such as UTF-8.
 #[derive(Debug)]
 pub struct BMByte {
-    bad_char_shift_map:     BMByteBadCharShiftMap,
+    bad_char_shift_map: BMByteBadCharShiftMap,
     bad_char_shift_map_rev: BMByteBadCharShiftMapRev,
-    pattern:                Vec<u8>,
+    pattern: Vec<u8>,
 }
 
 impl BMByte {
@@ -218,7 +228,7 @@ impl BMByte {
         Some(BMByte {
             bad_char_shift_map,
             bad_char_shift_map_rev,
-            pattern: pattern.iter().copied().collect(),
+            pattern: pattern.iter().collect(),
         })
     }
 }
@@ -305,7 +315,7 @@ pub fn find_full<TT: BMByteSearchable, TP: BMByteSearchable>(
     let mut result = vec![];
 
     'outer: loop {
-        for (i, pc) in pattern.iter().copied().enumerate().rev() {
+        for (i, pc) in pattern.iter().enumerate().rev() {
             if text.value_at(shift + i) != pc {
                 let p = shift + pattern_len;
                 if p == text_len {
@@ -377,7 +387,7 @@ pub fn rfind_full<TT: BMByteSearchable, TP: BMByteSearchable>(
     let mut result = vec![];
 
     'outer: loop {
-        for (i, pc) in pattern.iter().copied().enumerate() {
+        for (i, pc) in pattern.iter().enumerate() {
             if text.value_at(shift - pattern_len_dec + i) != pc {
                 if shift < pattern_len {
                     break 'outer;
@@ -540,7 +550,7 @@ pub fn find<TT: BMByteSearchable, TP: BMByteSearchable>(
     let mut result = vec![];
 
     'outer: loop {
-        for (i, pc) in pattern.iter().copied().enumerate().rev() {
+        for (i, pc) in pattern.iter().enumerate().rev() {
             if text.value_at(shift + i) != pc {
                 let p = shift + pattern_len;
                 if p == text_len {
@@ -604,7 +614,7 @@ pub fn rfind<TT: BMByteSearchable, TP: BMByteSearchable>(
     let mut result = vec![];
 
     'outer: loop {
-        for (i, pc) in pattern.iter().copied().enumerate() {
+        for (i, pc) in pattern.iter().enumerate() {
             if text.value_at(shift - pattern_len_dec + i) != pc {
                 if shift < pattern_len {
                     break 'outer;
