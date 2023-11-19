@@ -9,7 +9,7 @@ use core::ops::Deref;
 
 #[allow(clippy::len_without_is_empty)]
 pub trait BMByteSearchable {
-    type Iter<'it>: Iterator<Item = u8> + ExactSizeIterator + DoubleEndedIterator
+    type Iter<'it>: Iterator<Item = u8>
     where
         Self: 'it;
 
@@ -180,9 +180,12 @@ impl BMByteBadCharShiftMap {
 }
 
 impl BMByteBadCharShiftMapRev {
-    pub fn create_bad_char_shift_map<T: BMByteSearchable>(
-        pattern: T,
-    ) -> Option<BMByteBadCharShiftMapRev> {
+    pub fn create_bad_char_shift_map<'pat, T: BMByteSearchable>(
+        pattern: &'pat T,
+    ) -> Option<BMByteBadCharShiftMapRev>
+    where
+        T::Iter<'pat>: ExactSizeIterator + DoubleEndedIterator,
+    {
         let pattern_len = pattern.len();
 
         if pattern_len == 0 {
@@ -219,11 +222,14 @@ impl BMByte {
     /// ```
     /// use boyer_moore_magiclen::BMByte;
     ///
-    /// let bmb = BMByte::from("oocoo").unwrap();
+    /// let bmb = BMByte::from(&"oocoo").unwrap();
     /// ```
-    pub fn from<T: BMByteSearchable>(pattern: T) -> Option<BMByte> {
+    pub fn from<'pat, T: BMByteSearchable + 'pat>(pattern: &'pat T) -> Option<BMByte>
+    where
+        T::Iter<'pat>: ExactSizeIterator + DoubleEndedIterator,
+    {
         let bad_char_shift_map = BMByteBadCharShiftMap::create_bad_char_shift_map(&pattern)?;
-        let bad_char_shift_map_rev = BMByteBadCharShiftMapRev::create_bad_char_shift_map(&pattern)?;
+        let bad_char_shift_map_rev = BMByteBadCharShiftMapRev::create_bad_char_shift_map(pattern)?;
 
         Some(BMByte {
             bad_char_shift_map,
@@ -241,7 +247,7 @@ impl BMByte {
     /// ```
     /// use boyer_moore_magiclen::BMByte;
     ///
-    /// let bmb = BMByte::from("oocoo").unwrap();
+    /// let bmb = BMByte::from(&"oocoo").unwrap();
     ///
     /// assert_eq!(vec![1, 4, 7], bmb.find_full_all_in("coocoocoocoo"));
     /// ```
@@ -254,7 +260,7 @@ impl BMByte {
     /// ```
     /// use boyer_moore_magiclen::BMByte;
     ///
-    /// let bmb = BMByte::from("oocoo").unwrap();
+    /// let bmb = BMByte::from(&"oocoo").unwrap();
     ///
     /// assert_eq!(vec![1, 4], bmb.find_full_in("coocoocoocoo", 2));
     /// ```
@@ -269,7 +275,7 @@ impl BMByte {
     /// ```
     /// use boyer_moore_magiclen::BMByte;
     ///
-    /// let bmb = BMByte::from("oocoo").unwrap();
+    /// let bmb = BMByte::from(&"oocoo").unwrap();
     ///
     /// assert_eq!(vec![7, 4, 1], bmb.rfind_full_all_in("coocoocoocoo"));
     /// ```
@@ -282,7 +288,7 @@ impl BMByte {
     /// ```
     /// use boyer_moore_magiclen::BMByte;
     ///
-    /// let bmb = BMByte::from("oocoo").unwrap();
+    /// let bmb = BMByte::from(&"oocoo").unwrap();
     ///
     /// assert_eq!(vec![7, 4], bmb.rfind_full_in("coocoocoocoo", 2));
     /// ```
@@ -291,12 +297,15 @@ impl BMByte {
     }
 }
 
-pub fn find_full<TT: BMByteSearchable, TP: BMByteSearchable>(
+pub fn find_full<'pat, TT: BMByteSearchable, TP: BMByteSearchable>(
     text: TT,
-    pattern: TP,
+    pattern: &'pat TP,
     bad_char_shift_map: &BMByteBadCharShiftMap,
     limit: usize,
-) -> Vec<usize> {
+) -> Vec<usize>
+where
+    TP::Iter<'pat>: ExactSizeIterator + DoubleEndedIterator,
+{
     let text_len = text.len();
     let pattern_len = pattern.len();
 
@@ -450,7 +459,7 @@ impl BMByte {
     /// ```
     /// use boyer_moore_magiclen::BMByte;
     ///
-    /// let bmb = BMByte::from("oocoo").unwrap();
+    /// let bmb = BMByte::from(&"oocoo").unwrap();
     ///
     /// assert_eq!(vec![1, 7], bmb.find_all_in("coocoocoocoo"));
     /// ```
@@ -463,7 +472,7 @@ impl BMByte {
     /// ```
     /// use boyer_moore_magiclen::BMByte;
     ///
-    /// let bmb = BMByte::from("oocoo").unwrap();
+    /// let bmb = BMByte::from(&"oocoo").unwrap();
     ///
     /// assert_eq!(Some(1), bmb.find_first_in("coocoocoocoo"));
     /// ```
@@ -476,7 +485,7 @@ impl BMByte {
     /// ```
     /// use boyer_moore_magiclen::BMByte;
     ///
-    /// let bmb = BMByte::from("oocoo").unwrap();
+    /// let bmb = BMByte::from(&"oocoo").unwrap();
     ///
     /// assert_eq!(vec![1], bmb.find_in("coocoocoocoo", 1));
     /// ```
@@ -491,7 +500,7 @@ impl BMByte {
     /// ```
     /// use boyer_moore_magiclen::BMByte;
     ///
-    /// let bmb = BMByte::from("oocoo").unwrap();
+    /// let bmb = BMByte::from(&"oocoo").unwrap();
     ///
     /// assert_eq!(vec![7, 1], bmb.rfind_all_in("coocoocoocoo"));
     /// ```
@@ -504,7 +513,7 @@ impl BMByte {
     /// ```
     /// use boyer_moore_magiclen::BMByte;
     ///
-    /// let bmb = BMByte::from("oocoo").unwrap();
+    /// let bmb = BMByte::from(&"oocoo").unwrap();
     ///
     /// assert_eq!(Some(7), bmb.rfind_first_in("coocoocoocoo"));
     /// ```
@@ -517,7 +526,7 @@ impl BMByte {
     /// ```
     /// use boyer_moore_magiclen::BMByte;
     ///
-    /// let bmb = BMByte::from("oocoo").unwrap();
+    /// let bmb = BMByte::from(&"oocoo").unwrap();
     ///
     /// assert_eq!(vec![7], bmb.rfind_in("coocoocoocoo", 1));
     /// ```
@@ -526,12 +535,15 @@ impl BMByte {
     }
 }
 
-pub fn find<TT: BMByteSearchable, TP: BMByteSearchable>(
+pub fn find<'pat, TT: BMByteSearchable, TP: BMByteSearchable>(
     text: TT,
-    pattern: TP,
+    pattern: &'pat TP,
     bad_char_shift_map: &BMByteBadCharShiftMap,
     limit: usize,
-) -> Vec<usize> {
+) -> Vec<usize>
+where
+    TP::Iter<'pat>: ExactSizeIterator + DoubleEndedIterator,
+{
     let text_len = text.len();
     let pattern_len = pattern.len();
 

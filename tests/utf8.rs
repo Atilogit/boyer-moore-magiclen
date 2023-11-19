@@ -9,7 +9,7 @@ fn data_input_from_file() {
     common::data_input_from_file(
         INPUT_DATA_PATH,
         |text, pattern, answer, answer_not_full, answer_not_full_rev| {
-            let bm = BMByte::from(pattern).unwrap();
+            let bm = BMByte::from(&pattern).unwrap();
 
             assert_eq!(answer, bm.find_full_all_in(text));
             assert_eq!(

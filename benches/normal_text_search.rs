@@ -53,7 +53,7 @@ fn short_bmb(bencher: &mut Bencher) {
     let text = fs::read_to_string(TXT_PATH).unwrap();
 
     bencher.iter(|| {
-        let result = bmb_search(text.as_str(), PATTERN_SHORT);
+        let result = bmb_search(text.as_str(), &PATTERN_SHORT);
 
         assert_eq!(PATTERN_SHORT_RESULT_COUNT, result.len());
     });
@@ -103,7 +103,7 @@ fn long_bmb(bencher: &mut Bencher) {
     let text = fs::read_to_string(TXT_PATH).unwrap();
 
     bencher.iter(|| {
-        let result = bmb_search(text.as_str(), PATTERN_LONG);
+        let result = bmb_search(text.as_str(), &PATTERN_LONG);
 
         assert_eq!(PATTERN_LONG_RESULT_COUNT, result.len());
     });
@@ -153,7 +153,7 @@ fn not_exist_short_bmb(bencher: &mut Bencher) {
     let text = fs::read_to_string(TXT_PATH).unwrap();
 
     bencher.iter(|| {
-        let result = bmb_search(text.as_str(), NOT_EXIST_PATTERN_SHORT);
+        let result = bmb_search(text.as_str(), &NOT_EXIST_PATTERN_SHORT);
 
         assert_eq!(0, result.len());
     });
@@ -214,7 +214,7 @@ fn not_exist_long_bmb(bencher: &mut Bencher) {
     let text = fs::read_to_string(TXT_PATH).unwrap();
 
     bencher.iter(|| {
-        let result = bmb_search(text.as_str(), NOT_EXIST_PATTERN_LONG);
+        let result = bmb_search(text.as_str(), &NOT_EXIST_PATTERN_LONG);
 
         assert_eq!(0, result.len());
     });

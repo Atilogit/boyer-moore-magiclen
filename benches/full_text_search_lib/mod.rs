@@ -59,7 +59,13 @@ pub fn regex_search<S: AsRef<str>, P: AsRef<str>>(text: S, pattern: P) -> Vec<us
     result
 }
 
-pub fn bmb_search<TT: BMByteSearchable, TP: BMByteSearchable>(text: TT, pattern: TP) -> Vec<usize> {
+pub fn bmb_search<'pat, TT: BMByteSearchable, TP: BMByteSearchable>(
+    text: TT,
+    pattern: &'pat TP,
+) -> Vec<usize>
+where
+    TP::Iter<'pat>: ExactSizeIterator + DoubleEndedIterator,
+{
     let bad_char_shift_map = BMByteBadCharShiftMap::create_bad_char_shift_map(&pattern).unwrap();
 
     boyer_moore_magiclen::byte::find_full(text, pattern, &bad_char_shift_map, 0)
